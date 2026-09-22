@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Daftar Hadir Siswa - Mobile Edition</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- HTML5 QRCode Library CDN for Barcode/QR Scanning -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        };
+    </script>
+</head>
+<body class="bg-slate-100 min-h-screen flex flex-col font-sans text-slate-800 antialiased selection:bg-brand-500 selection:text-white pb-20 md:pb-6">
+
+    <!-- Application Header -->
+    <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-30 no-print">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-brand-500 flex items-center justify-center font-black text-lg text-white shadow-md shrink-0">
+                    <i class="fa-solid fa-clipboard-user"></i>
+                </div>
+                <div>
+                    <h1 class="text-base font-bold leading-tight tracking-tight">PRESENSI SISWA TK DAN TET</h1>
+                    <p class="text-[10px] text-slate-400">Sistem Daftar Hadir Smartphone</p>
+                    <p class="text-[10px] text-slate-400">SMKN 2 GERUNG</p>
+                </div>
+            </div>
+            <!-- Header Right Buttons -->
+            <div class="flex items-center space-x-2">
+                <!-- Tombol PRESENSI KEHADIRAN PAGI (Scan Barcode) -->
+                <button onclick="openScanModal()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 px-3.5 py-2 rounded-xl text-xs font-extrabold transition flex items-center space-x-1.5 shadow-md shrink-0">
+                    <i class="fa-solid fa-qrcode text-sm"></i>
+                    <span>PRESENSI KEHADIRAN PAGI</span>
+                </button>
+                <!-- Tombol Pengaturan Integrasi Spreadsheet -->
+                <button onclick="openSheetModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-md shrink-0" title="Atur Link Google Sheets">
+                    <i class="fa-solid fa-gear text-sm"></i>
+                    <span class="hidden sm:inline">Set Sheet</span>
+                </button>
+                <!-- Tombol REKAP di Header Kanan Atas -->
+                <a id="btn-rekap-link" href="https://docs.google.com/spreadsheets/d/1PnesL--TUWzhxnAiiY-rubQjoCHIxuzKYLSmld8xvFg/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-md shrink-0">
+                    <i class="fa-solid fa-table text-sm"></i>
+                    <span>REKAP</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 px-4 py-2 flex justify-around items-center shadow-lg no-print md:hidden">
+        <button onclick="toggleTab('attendance')" id="nav-mob-attendance" class="flex flex-col items-center text-brand-600 font-bold transition-all">
+            <i class="fa-solid fa-pen-to-square text-lg"></i>
+            <span class="text-[10px] mt-0.5">Presensi</span>
+        </button>
+        <button onclick="toggleTab('manage')" id="nav-mob-manage" class="flex flex-col items-center text-slate-400 transition-all">
+            <i class="fa-solid fa-users text-lg"></i>
+            <span class="text-[10px] mt-0.5">Siswa</span>
+        </button>
+    </nav>
+
+    <!-- Desktop Navigation Tabs -->
+    <div class="hidden md:block bg-white border-b border-slate-200 no-print">
+        <div class="max-w-7xl mx-auto px-4 flex space-x-4">
+            <button onclick="toggleTab('attendance')" id="btn-tab-attendance" class="py-3 px-4 text-xs font-bold border-b-2 border-brand-500 text-brand-600 transition flex items-center space-x-2">
+                <i class="fa-solid fa-pen-to-square"></i>
+                <span>Presensi Hari Ini</span>
+            </button>
+            <button onclick="toggleTab('manage')" id="btn-tab-manage" class="py-3 px-4 text-xs font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition flex items-center space-x-2">
+                <i class="fa-solid fa-users"></i>
+                <span>Kelola Master Siswa</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toast-container" class="fixed top-16 right-4 left-4 sm:left-auto sm:w-80 z-50 flex flex-col space-y-2 pointer-events-none no-print"></div>
+
+    <!-- Hidden Global File Input for Photo Upload -->
+    <input type="file" id="global-photo-input" accept="image/*" class="hidden no-print" onchange="onGlobalPhotoSelected(event)">
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4">
+
+        <!-- Mobile-first Controls Bar -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-3.5 mb-4 no-print space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Kelas</label>
+                    <select id="select-class" onchange="handleClassChange()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-2 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        <option value="X TK 1">X TK 1</option>
+                        <option value="X TK 2">X TK 2</option>
+                        <option value="X TESHA">X TESHA</option>
+                        <option value="XI TITL">XI TITL</option>
+                        <option value="XI TPTUP">XI TPTUP</option>
+                        <option value="XI TJTL">XI TJTL</option>
+                        <option value="XII TITL">XII TITL</option>
+                        <option value="XII TPTUP">XII TPTUP</option>
+                        <option value="XII TJTL">XII TJTL</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Mata Pelajaran</label>
+                    <select id="input-subject" onchange="handleSubjectChange()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-2 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        <option value="Kehadiran Pagi">Kehadiran Pagi</option>
+                        <option value="PDE">PDE</option>
+                        <option value="DLE">DLE</option>
+                        <option value="GTL">GTL</option>
+                        <option value="DDTET">DDTET</option>
+                        <option value="IPL">IPL</option>
+                        <option value="KIK">KIK</option>
+                        <option value="IML">IML</option>
+                        <option value="ITL">ITL</option>
+                        <option value="JDTL">JDTL</option>
+                        <option value="PJTL">PJTL</option>
+                        <option value="SKRTU">SKRTU</option>
+                        <option value="TPOA">TPOA</option>
+                        <option value="SITU">SITU</option>
+                        <option value="SIR">SIR</option>
+                        <option value="SPA">SPA</option>
+                        <option value="TPBM">TPBM</option>
+                        <option value="PAI">PAI</option>
+                        <option value="PKN">PKN</option>
+                        <option value="B. INDO">B. INDO</option>
+                        <option value="B. ING">B. ING</option>
+                        <option value="MTK">MTK</option>
+                        <option value="SI">SI</option>
+                        <option value="SBD">SBD</option>
+                        <option value="PJOK">PJOK</option>
+                        <option value="INF">INF</option>
+                        <option value="PIPAS">PIPAS</option>
+                        <option value="KKA">KKA</option>
+                        <option value="MULOK">MULOK</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Tanggal</label>
+                    <input type="date" id="input-date" onchange="handleDateChange()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 1: PRESENSI HARI INI -->
+        <section id="tab-attendance" class="space-y-4">
+
+            <!-- Mobile Compact Stats Cards (Updated for 7 columns) -->
+            <div class="grid grid-cols-3 sm:grid-cols-7 gap-2 no-print">
+                <div class="bg-white rounded-xl p-2 border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
+                    <span class="text-[10px] font-semibold text-slate-400">Total</span>
+                    <span id="stat-total" class="text-base font-extrabold text-slate-800 mt-0.5">0</span>
+                </div>
+                <div class="bg-emerald-50 rounded-xl p-2 border border-emerald-200 shadow-sm flex flex-col items-center justify-center text-center">
+                    <span class="text-[10px] font-bold text-emerald-600">Hadir (H)</span>
+                    <span id="stat-hadir" class="text-base font-extrabold text-emerald-700 mt-0.5">0</span>
+                </div>
+                <div class="bg-amber-50 rounded-xl p-2 border border-amber-200 shadow-sm flex flex-col items-center justify-center text-center">
+                    <span class="text-[10px] font-bold text-amber-600">Sakit (S)</span>
+                    <span id="stat-sakit" class="text-base font-extrabold text-amber-700 mt-0.5">0</span>
+                </div>
+                <div class="bg-sky-50 rounded-xl p-2 border border-sky-200 shadow-sm flex flex-col items-center justify-center text-center">
+                    <span class="text-[10px] font-bold text-sky-600">Izin (I)</span>
+                    <span id="stat-izin" class="text-base font-extrabold text-sky-700 mt-0.5">0</span>
+                </div>
+                <div class="bg-rose-50 rounded-xl p-2 border border-rose-200 shadow-sm flex flex-col items-center justify-center text-center">
+                    <span class="text-[10px] font-bold text-rose-600">Abstain (A)</span>
+                    <span id="stat-alpa" class="text-base font-extrabold text-rose-700 mt-0.5">0</span>
+                </div>
+                <div class="bg-indigo-50 rounded-xl p-2 border border-indigo-200 shadow-sm flex flex-col items-center justify-center text-center">
+                    <span class="text-[10px] font-bold text-indigo-600">Terlambat (T)</span>
+                    <span id="stat-terlambat" class="text-base font-extrabold text-indigo-700 mt-0.5">0</span>
+                </div>
+                <div class="bg-fuchsia-50 rounded-xl p-2 border border-fuchsia-200 shadow-sm flex flex-col items-center justify-center text-center">
+                    <span class="text-[10px] font-bold text-fuchsia-600">Bolos (B)</span>
+                    <span id="stat-bolos" class="text-base font-extrabold text-fuchsia-700 mt-0.5">0</span>
+                </div>
+            </div>
+
+            <!-- Quick Actions Toolbar -->
+            <div class="flex items-center space-x-2 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm no-print">
+                <button onclick="setAllPresent()" class="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-bold rounded-xl transition text-center flex items-center space-x-1">
+                    <i class="fa-solid fa-check-double"></i>
+                    <span>Set Semua Hadir</span>
+                </button>
+                <button onclick="resetAllStatus()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition text-center">
+                    Reset Status
+                </button>
+            </div>
+
+            <!-- Mobile Student Card List View (Visible on Mobile) -->
+            <div id="mobile-student-cards" class="space-y-3 block sm:hidden no-print">
+                <!-- Dynamic Mobile Cards Content -->
+            </div>
+
+            <!-- Desktop Table View (Visible on Desktop/Tablet) -->
+            <div class="hidden sm:block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden no-print">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead class="bg-slate-100/80 text-slate-600 font-bold border-b border-slate-200 uppercase tracking-wider">
+                            <tr>
+                                <th class="py-3 px-4 w-12 text-center">No</th>
+                                <th class="py-3 px-4 min-w-[100px]">NIS/NISN</th>
+                                <th class="py-3 px-4 min-w-[180px]">Nama Lengkap</th>
+                                <th class="py-3 px-4 text-center min-w-[60px]">L/P</th>
+                                <th class="py-3 px-4 text-center min-w-[290px]">Status Kehadiran</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendance-tbody" class="divide-y divide-slate-100 text-slate-700 font-medium">
+                            <!-- Dynamic Content for Desktop Table -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Action Bar di Bawah (KIRIM & SHARE WA) -->
+            <div class="pt-2 flex flex-col sm:flex-row items-center justify-end gap-2.5 no-print">
+                <button onclick="saveAndSubmitAttendance()" class="w-full sm:w-auto px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-extrabold rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-paper-plane text-xs"></i>
+                    <span>KIRIM</span>
+                </button>
+                <button onclick="sendWhatsApp()" class="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+                    <i class="fa-brands fa-whatsapp text-sm"></i>
+                    <span>SHARE WA</span>
+                </button>
+            </div>
+
+        </section>
+
+        <!-- TAB 2: KELOLA SISWA -->
+        <section id="tab-manage" class="hidden space-y-4">
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                    <h2 class="text-sm sm:text-base font-bold text-slate-800">
+                        Kelola Data Siswa (<span id="current-manage-class">X TK 1</span>)
+                    </h2>
+                    <button onclick="openImportModal()" class="w-full sm:w-auto px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl transition flex items-center justify-center space-x-2 shadow-md">
+                        <i class="fa-solid fa-file-import text-sm"></i>
+                        <span>Impor Data Siswa</span>
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+                            <tr>
+                                <th class="py-2.5 px-3 w-10 text-center">No</th>
+                                <th class="py-2.5 px-3">NIS/NISN</th>
+                                <th class="py-2.5 px-3">Nama Lengkap</th>
+                                <th class="py-2.5 px-3 text-center">L/P</th>
+                                <th class="py-2.5 px-3 text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="manage-tbody" class="divide-y divide-slate-100 font-medium">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal Batch Import Siswa -->
+    <div id="modal-import" class="fixed inset-0 bg-slate-900/60 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 hidden no-print">
+        <div class="bg-white rounded-t-2xl sm:rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 transform transition-all">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="text-sm font-bold text-slate-800">Impor Data Siswa</h3>
+                <button onclick="closeImportModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <p class="text-[11px] text-slate-500 mb-3">Masukkan data siswa per baris.<br>Format: <code class="bg-slate-100 px-1 py-0.5 rounded text-brand-700 font-semibold">NISN, NAMA, JENIS KELAMIN (L/P)</code></p>
+            <textarea id="import-text" rows="6" placeholder="1001, Ahmad Rizky Pratama, L&#10;1002, Siti Aminah, P&#10;1003, Budi Santoso, L" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none mb-4 font-mono"></textarea>
+            <div class="flex justify-end space-x-2">
+                <button onclick="closeImportModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition">
+                    Batal
+                </button>
+                <button onclick="processBatchImport()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl transition">
+                    Proses Impor
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Konfigurasi Google Sheets API -->
+    <div id="modal-sheet-config" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 hidden no-print backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl border border-slate-200">
+            <div class="flex justify-between items-center mb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="bg-emerald-100 text-emerald-700 p-2 rounded-xl">
+                        <i class="fa-solid fa-file-excel text-base"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-800">Pengaturan Google Sheets Web App</h3>
+                        <p class="text-[10px] text-slate-500">Hubungkan presensi langsung ke Google Spreadsheet</p>
+                    </div>
+                </div>
+                <button onclick="closeSheetModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1">URL Web App Google Apps Script</label>
+                    <input type="text" id="input-sheet-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Link Spreadsheet Rekap (Opsional)</label>
+                    <input type="text" id="input-sheet-rekap-url" placeholder="https://docs.google.com/spreadsheets/d/..." class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                </div>
+
+                <!-- Petunjuk Apps Script Code -->
+                <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 text-[11px]">
+                    <p class="font-bold text-slate-700 mb-1">Kode Google Apps Script (Auto Update/Pembaruan Data):</p>
+                    <p class="text-[10px] text-slate-500 mb-2">Pasang script berikut di menu <strong>Extensions > Apps Script</strong> pada Google Sheets Anda lalu deploy sebagai <em>Web App (Anyone)</em>:</p>
+                    <pre class="bg-slate-900 text-emerald-400 p-2 rounded-lg font-mono text-[9px] overflow-x-auto select-all leading-relaxed">
+function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = JSON.parse(e.postData.contents);
+  
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(["Nama siswa", "Tanggal", "Nama mata pelajaran", "Status kehadiran", "Kelas"]);
+  }
+  
+  var rows = sheet.getDataRange().getValues();
+  
+  data.forEach(function(item) {
+    var foundIndex = -1;
+    for (var i = 1; i < rows.length; i++) {
+      if (rows[i][0] == item.nama && rows[i][1] == item.tanggal && rows[i][2] == item.mata_pelajaran) {
+        foundIndex = i + 1;
+        break;
+      }
+    }
+    if (foundIndex > -1) {
+      sheet.getRange(foundIndex, 4).setValue(item.status_kehadiran);
+    } else {
+      sheet.appendRow([item.nama, item.tanggal, item.mata_pelajaran, item.status_kehadiran, item.kelas]);
+    }
+  });
+  
+  return ContentService.createTextOutput(JSON.stringify({status: "success"}))
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 mt-4">
+                <button onclick="closeSheetModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition">
+                    Batal
+                </button>
+                <button onclick="saveSheetConfig()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition">
+                    Simpan Pengaturan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Scan Barcode Presensi Kehadiran Pagi -->
+    <div id="modal-scan" class="fixed inset-0 bg-slate-900/70 flex items-center justify-center p-3 z-50 hidden no-print backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 flex flex-col">
+            <div class="flex justify-between items-center mb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="bg-amber-100 text-amber-700 p-2 rounded-xl">
+                        <i class="fa-solid fa-qrcode text-base"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-extrabold text-slate-800">Presensi Kehadiran Pagi</h3>
+                        <p class="text-[10px] text-slate-500">Scan NIS (Maks 07.30 = Hadir, >07.30 = Terlambat)</p>
+                    </div>
+                </div>
+                <button onclick="closeScanModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Scanner Camera Viewport -->
+            <div id="qr-reader" class="w-full rounded-xl overflow-hidden bg-slate-900 min-h-[220px] mb-3 relative flex items-center justify-center text-white text-xs">
+            </div>
+
+            <!-- Manual Barcode Input Form -->
+            <form onsubmit="handleManualBarcodeSubmit(event)" class="space-y-2 mb-2">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase">Atau Input / Scan Manual NIS</label>
+                <div class="flex space-x-2">
+                    <input type="text" id="manual-barcode-input" placeholder="Masukkan / Scan NIS disini..." class="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-slate-900 px-4 py-2 rounded-xl text-xs font-extrabold transition">
+                        Absen
+                    </button>
+                </div>
+            </form>
+
+            <!-- Last Scanned Info Display -->
+            <div id="scan-last-result" class="hidden p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-extrabold truncate text-xs" id="scan-result-name">-</p>
+                    <p class="text-[10px] text-emerald-600 font-semibold" id="scan-result-info">-</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Default Students Data
+        const defaultStudents = {
+            "X TK 1": [
+                { id: "0118887250", name: "Abdul Saefuddin Al-Wahid", gender: "L" },
+                { id: "0115368740", name: "Ahmad Fauzan", gender: "L" },
+                { id: "0101512256", name: "Ahmad Zakaria", gender: "L" },
+                { id: "115644445", name: "Alvin Rijalul Fiqri", gender: "L" },
+                { id: "3117381783", name: "Andhika Nurfadilah", gender: "L" },
+                { id: "3113397287", name: "Andrian Pertama", gender: "L" },
+                { id: "118165071", name: "Beni Aprilidan", gender: "L" },
+                { id: "118165056", name: "Davilla Zahra Megania Putri", gender: "P" },
+                { id: "3118546789", name: "Dedi Sukandi", gender: "L" },
+                { id: "0107764373", name: "Habib Alwi", gender: "L" },
+                { id: "0117286874", name: "Intan Nuraini", gender: "P" },
+                { id: "112632966", name: "Iqbal Maulana", gender: "L" },
+                { id: "115217324", name: "Khairul Azmi", gender: "L" },
+                { id: "114926779", name: "M Nopal Saputra", gender: "L" },
+                { id: "108240208", name: "M. Saleh Ferdiansyah", gender: "L" },
+                { id: "104219671", name: "Moh. Putra Alfian", gender: "L" },
+                { id: "0098916612", name: "Muhajirin", gender: "L" },
+                { id: "95744915", name: "Muhamad Zakaria", gender: "L" },
+                { id: "107233384", name: "Muhammad Dapin Aziz", gender: "L" },
+                { id: "119695398", name: "Muhammad Rifqi Pratama", gender: "L" },
+                { id: "119870279", name: "Muhammad Zainul Hikam", gender: "L" },
+                { id: "103898643", name: "Putri Ananta Zaliyanti", gender: "P" },
+                { id: "114825633", name: "Radit Gigih Purnama", gender: "L" },
+                { id: "111133039", name: "Rafael Efendi", gender: "L" },
+                { id: "3095963495", name: "Rizki Alif Septiawan", gender: "L" },
+                { id: "3110507477", name: "Ronal", gender: "L" },
+                { id: "3116096214", name: "Saiful Fahmi", gender: "L" },
+                { id: "0107651549", name: "Wahjudi", gender: "L" },
+                { id: "0103972079", name: "Zarkasi Irvan", gender: "L" }
+            ],
+            "X TK 2": [
+                { id: "99914468", name: "Abil Sahputra", gender: "L", photo: "https://drive.google.com/file/d/1gvr4PbIlqQhvIuJt36Nbioukgq11nQSw/view?usp=sharing" },
+                { id: "103719825", name: "Alvino Rafa Novryan", gender: "L", photo: "https://drive.google.com/file/d/1P16PSxyFwMKwB0v0Yo1tCKhJFBTW5ROr/view?usp=sharing" },
+                { id: "108142807", name: "Andri Wijaya", gender: "L", photo: "" },
+                { id: "0112356210", name: "Babus Firdaus", gender: "L", photo: "" },
+                { id: "125737655", name: "Dedi Santuri", gender: "L", photo: "https://drive.google.com/file/d/1F-snAn6EhcIVPLBNJVZcSgu5wi7tQOxb/view?usp=sharing" },
+                { id: "108334400", name: "Dimas Falentino", gender: "L", photo: "https://drive.google.com/file/d/1FzFbkPhhQLY_GBOASAlHKJd8yC0hLWQW/view?usp=sharing" },
+                { id: "116279636", name: "Faruq Abdul Aziz", gender: "L", photo: "" },
+                { id: "102356022", name: "Haekal", gender: "L", photo: "https://drive.google.com/file/d/1TGu8pfFkCzmS_lkLSMnt5prJVMMSmXbM/view?usp=sharing" },
+                { id: "119538266", name: "Halqi Apriyadi Habibullah", gender: "L", photo: "https://drive.google.com/file/d/19LjNCuX0KQduSzm7bwX2t3BNPUS_qmLE/view?usp=sharing" },
+                { id: "95804580", name: "Hazul Azmi", gender: "L", photo: "" },
+                { id: "774792988", name: "Irfan Maulana", gender: "L", photo: "https://drive.google.com/file/d/1VaHn_abc0rWFeJFov0wK8P7VPd3jlQE7/view?usp=sharing" },
+                { id: "0089387663", name: "Juliadi Adriawan", gender: "L", photo: "" },
+                { id: "3112190310", name: "Jumawal", gender: "L", photo: "https://drive.google.com/file/d/1YbV-mCkruaJJIeCaYkcJK0G7bj3hWG7Q/view?usp=sharing" },
+                { id: "3112213347", name: "Kasdi", gender: "L", photo: "https://drive.google.com/file/d/1O_17KUVK38D1kgFbFO0PYIZ0wEQJkiYw/view?usp=sharing" },
+                { id: "108578639", name: "Laelatul Hafizah", gender: "P", photo: "https://drive.google.com/file/d/1M77h57LHT7pXUqRAoKJfAkzvpQD_Eck3/view?usp=sharing" },
+                { id: "89831915", name: "Lalu Gading Purnawijaya", gender: "L", photo: "https://drive.google.com/file/d/1kivIIuSGU3y8FoeL7hLjoE-qY4NgcPx4/view?usp=sharing" },
+                { id: "111326081", name: "M Fauzan Ibror", gender: "L", photo: "https://drive.google.com/file/d/1tKMjzhUqMaL2AItgMSIVPI9ZNQzNe2fb/view?usp=sharing" },
+                { id: "3114900865", name: "M. Irfan Ibrahim", gender: "L", photo: "https://drive.google.com/file/d/11PTsRAsiTatvMBjK3gROoEfr8EG7d_jT/view?usp=sharing" },
+                { id: "3118269961", name: "M. Suhendar Hariri", gender: "L", photo: "https://drive.google.com/file/d/1Ia63Px6LgFKq2XgalU4zvS-OiFzvCwoN/view?usp=sharing" },
+                { id: "0103694826", name: "Mahyudi", gender: "L", photo: "https://drive.google.com/file/d/1Lj9zZCT3IwvyvXBWocsFwI420eAyV-3e/view?usp=sharing" },
+                { id: "111471527", name: "Muhamad Jayadi", gender: "L", photo: "https://drive.google.com/file/d/1pAzaT7_HpXBjNleBihfT-5fzf_UKNxPk/view?usp=sharing" },
+                { id: "111981065", name: "Muhammad Asrulloh", gender: "L", photo: "https://drive.google.com/file/d/1OzDXn37rU6Y_CcIkDPKZS9PPoKVyGE76/view?usp=sharing" },
+                { id: "3116156590", name: "Muhammad Azka Akbar", gender: "L", photo: "https://drive.google.com/file/d/1FmUufVc2aQrYbIp083KyJyc3q16Y6j36/view?usp=sharing" },
+                { id: "0109541851", name: "Noviana", gender: "P", photo: "https://drive.google.com/file/d/1kziBg9jLXiFaa8jGms29yL-SgjwMSflp/view?usp=sharing" },
+                { id: "115082092", name: "Raditya Bintang Anugrah", gender: "L", photo: "https://drive.google.com/file/d/1X2PKNdoFC43HlECRZlucY4nlscjhh6BM/view?usp=sharing" },
+                { id: "0118439068", name: "Rafa Nabil Putra", gender: "L", photo: "https://drive.google.com/file/d/1yp_jYMuFN0Vw0j0KGrZkmDujHAwlBv3H/view?usp=sharing" },
+                { id: "0109337290", name: "Riki Saputra", gender: "L", photo: "" },
+                { id: "3124015898", name: "Saiful Azhari", gender: "L", photo: "https://drive.google.com/file/d/1JhM1o-MfOAMm5ip7Ktp2JrZfEj7LQ-Zr/view?usp=sharing" },
+                { id: "0096514415", name: "Sulhan", gender: "L", photo: "" },
+                { id: "0096514416", name: "Tanto Winata", gender: "L", photo: "https://drive.google.com/file/d/1PfVhMq0FDE7sdmG99WA1U0MHWluhYJMF/view?usp=sharing" }
+            ],
+            "X TESHA": [
+                { id: "0000267", name: "Adli Rehan", gender: "L", photo: "" },
+                { id: "0113501288", name: "Budiarja", gender: "L", photo: "https://drive.google.com/file/d/1IGq9PmTPff7M8E5N8t3OSJU729nqRwn7/view?usp=sharing" },
+                { id: "0111616032", name: "Daud Perdana", gender: "L", photo: "https://drive.google.com/file/d/1q-6VU2rVHDtCY13UXirM8pYarq-n-Rvr/view?usp=drive_link" },
+                { id: "107074550", name: "Erwin Sanjaya", gender: "L", photo: "https://drive.google.com/file/d/1wMAwjwr1VgUEzvQBj23Ymi_QqNk1Nw6V/view?usp=drive_link" },
+                { id: "0117842831", name: "Halimun Hakim", gender: "L", photo: "https://drive.google.com/file/d/1PnyuEYMXn5TdxQB6v-OQXywjmuj31CvH/view?usp=drive_link" },
+                { id: "0109217686", name: "M. Satria Varozy", gender: "L", photo: "https://drive.google.com/file/d/1QnvTLBU4DJCrw_6K4q28GDn9zG9SKw6Y/view?usp=drive_link" },
+                { id: "105921421", name: "M. Yunus", gender: "L", photo: "https://drive.google.com/file/d/1biUbrtLEIP2VyDVVoPioO1sirRelMysp/view?usp=drive_link" },
+                { id: "0106565772", name: "Muammar Arafat", gender: "L", photo: "https://drive.google.com/file/d/1J-AyDoDrCyyj_0hgAQOs5D52loVKxKz8/view?usp=drive_link" },
+                { id: "111991501", name: "Muhamad Aden", gender: "L", photo: "https://drive.google.com/file/d/1_WugZO81VG3el2ctq3H351Y2ay8fDh5M/view?usp=drive_link" },
+                { id: "0125359475", name: "Rion Anggara Saputra", gender: "L", photo: "https://drive.google.com/file/d/17YlFoOBjm1qqK1TxlbFhfUmmjY3Li4Zb/view?usp=drive_link" },
+                { id: "111533335", name: "Rizwan Affandi", gender: "L", photo: "https://drive.google.com/file/d/1A3WFVDhxmGt5KGa68qeUcK0n2ae1NHeT/view?usp=drive_link" }
+            ],
+            "XI TITL": [
+                { id: "0184729103", name: "Abdul Muhti", gender: "L", photo: "" },
+                { id: "0129384751", name: "Argya Al Ghibran Pratama", gender: "L", photo: "" },
+                { id: "0193847201", name: "Diki Wahyudi", gender: "L", photo: "" },
+                { id: "0172635489", name: "Firza Wananda", gender: "L", photo: "" },
+                { id: "0148392015", name: "Hasan Basri", gender: "L", photo: "" },
+                { id: "0165748392", name: "Herma Rahma Yulianda", gender: "P", photo: "" },
+                { id: "0139204857", name: "Ibnu Wathan", gender: "L", photo: "" },
+                { id: "0158392014", name: "Lalu Ade Dwi Anggian", gender: "L", photo: "" },
+                { id: "0182736450", name: "Mahendra Irawan", gender: "L", photo: "" },
+                { id: "0194837261", name: "Marzuki Ali", gender: "L", photo: "" },
+                { id: "0120493857", name: "Moh. Haetami", gender: "L", photo: "" },
+                { id: "0173829104", name: "Muhammad Aditya Juniar", gender: "L", photo: "" },
+                { id: "0162534109", name: "Muhammad Reza", gender: "L", photo: "" },
+                { id: "0138492017", name: "Rizki Pratama", gender: "L", photo: "" },
+                { id: "0157483920", name: "Suherman", gender: "L", photo: "" },
+                { id: "0183920147", name: "Tamhiz", gender: "L", photo: "" },
+                { id: "0192837465", name: "Zihandi Alan Arzaki", gender: "L", photo: "" }
+            ],
+            "XI TPTUP": [
+                { id: "0184729103", name: "Ahmad Sabudin", gender: "L", photo: "" },
+                { id: "0129384751", name: "Aldy", gender: "L", photo: "" },
+                { id: "0193847201", name: "Andika Santuri", gender: "L", photo: "" },
+                { id: "0172635489", name: "Bayu Andika", gender: "L", photo: "" },
+                { id: "0148392015", name: "Fandi Irawan", gender: "L", photo: "" },
+                { id: "0165748392", name: "Farizal Hikam", gender: "L", photo: "" },
+                { id: "0139204857", name: "Fery Firmansyah", gender: "L", photo: "" },
+                { id: "0158392014", name: "Haekal Azmi", gender: "L", photo: "" },
+                { id: "0182736450", name: "Hendra Kurniawan", gender: "L", photo: "" },
+                { id: "0194837261", name: "Maulana Iqbal", gender: "L", photo: "" },
+                { id: "0120493857", name: "Muhamad Fikri Al Islami", gender: "L", photo: "" },
+                { id: "0173829104", name: "Muhamat Saleh", gender: "L", photo: "" },
+                { id: "0162534109", name: "Muhammad Hadrian", gender: "L", photo: "" },
+                { id: "0138492017", name: "Paesal Aziz", gender: "L", photo: "" },
+                { id: "0157483920", name: "Rama Ramdani", gender: "L", photo: "" },
+                { id: "0183920147", name: "Riswan Efendi", gender: "L", photo: "" }
+            ],
+            "XI TJTL": [
+                { id: "0138492015", name: "Abdul Aziz", gender: "L", photo: "" },
+                { id: "0172635489", name: "Arip Hidayatullah", gender: "L", photo: "" },
+                { id: "0193847201", name: "Azan Saputra", gender: "L", photo: "" },
+                { id: "0129384751", name: "Fairuzzaini", gender: "L", photo: "" },
+                { id: "0184729103", name: "Gede Agus Pramasetya", gender: "L", photo: "" },
+                { id: "0165748392", name: "Haekal Ramdhan", gender: "L", photo: "" },
+                { id: "0148392015", name: "Lalu Deny Hariadi", gender: "L", photo: "" },
+                { id: "0139204857", name: "Lalu Panji Wijaya Saputra", gender: "L", photo: "" },
+                { id: "0158392014", name: "Lalu Raditya Roni Saputra", gender: "L", photo: "" },
+                { id: "0182736450", name: "M. Erwin", gender: "L", photo: "" },
+                { id: "0194837261", name: "M. Ricki Ikbal", gender: "L", photo: "" },
+                { id: "0194837362", name: "Muh. Alfin Pratama", gender: "L", photo: "" },
+                { id: "0120493857", name: "Muh. Raffa Khoirul Azzam", gender: "L", photo: "" },
+                { id: "0173829104", name: "Muhammad Syahrul Tanzil", gender: "L", photo: "" },
+                { id: "0162534109", name: "Rio Ferdinand", gender: "L", photo: "" },
+                { id: "0157483920", name: "Sandi Irawan", gender: "L", photo: "" },
+                { id: "0183920147", name: "Zadil Ruzahan", gender: "L", photo: "" }
+            ],
+            "XII TITL": [
+                { id: "3002", name: "Eko Prasetyo", gender: "L" }
+            ],
+            "XII TPTUP": [
+                { id: "4001", name: "Fikri Ramadhan", gender: "L" }
+            ],
+            "XII TJTL": [
+                { id: "4002", name: "Grace Natalie", gender: "P" }
+            ]
+        };
+
+        // Application State
+        let currentClass = "X TK 1";
+        let currentDate = new Date().toISOString().split('T')[0];
+        let masterStudents = JSON.parse(localStorage.getItem('dh_students')) || JSON.parse(JSON.stringify(defaultStudents));
+
+        // Auto-update master data
+        masterStudents["X TK 1"] = defaultStudents["X TK 1"];
+        masterStudents["X TK 2"] = defaultStudents["X TK 2"];
+        masterStudents["X TESHA"] = defaultStudents["X TESHA"];
+        masterStudents["XI TITL"] = defaultStudents["XI TITL"];
+        masterStudents["XI TJTL"] = defaultStudents["XI TJTL"];
+        masterStudents["XI TPTUP"] = defaultStudents["XI TPTUP"];
+        localStorage.setItem('dh_students', JSON.stringify(masterStudents));
+
+        let attendanceRecords = JSON.parse(localStorage.getItem('dh_records')) || {};
+        let currentUploadingNis = null;
+        let html5QrcodeScanner = null;
+
+        // App Initialization
+        window.onload = function() {
+            const dateInput = document.getElementById('input-date');
+            if (dateInput) dateInput.value = currentDate;
+            loadSessionInfo();
+            loadSheetConfig();
+            renderAttendanceTable();
+            renderManageTable();
+        };
+
+        // Google Sheets Integration Config Functions
+        function openSheetModal() {
+            const modal = document.getElementById('modal-sheet-config');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeSheetModal() {
+            const modal = document.getElementById('modal-sheet-config');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function saveSheetConfig() {
+            const webAppUrl = document.getElementById('input-sheet-url')?.value.trim() || '';
+            const rekapUrl = document.getElementById('input-sheet-rekap-url')?.value.trim() || '';
+            
+            localStorage.setItem('dh_sheet_webapp_url', webAppUrl);
+            localStorage.setItem('dh_sheet_rekap_url', rekapUrl);
+            
+            const rekapBtn = document.getElementById('btn-rekap-link');
+            if (rekapBtn) {
+                rekapBtn.href = rekapUrl || 'https://docs.google.com/spreadsheets';
+            }
+
+            closeSheetModal();
+            showToast('Pengaturan Google Sheets disimpan!', 'success');
+        }
+
+        function loadSheetConfig() {
+            const webAppUrl = localStorage.getItem('dh_sheet_webapp_url') || '';
+            const rekapUrl = localStorage.getItem('dh_sheet_rekap_url') || '';
+            
+            const webAppInput = document.getElementById('input-sheet-url');
+            if (webAppInput) webAppInput.value = webAppUrl;
+
+            const rekapInput = document.getElementById('input-sheet-rekap-url');
+            if (rekapInput) rekapInput.value = rekapUrl;
+
+            const rekapBtn = document.getElementById('btn-rekap-link');
+            if (rekapBtn && rekapUrl) {
+                rekapBtn.href = rekapUrl;
+            }
+        }
+
+        // Scan Barcode Presensi Pagi Functions
+        function openScanModal() {
+            const modal = document.getElementById('modal-scan');
+            if (modal) modal.classList.remove('hidden');
+
+            const manualInput = document.getElementById('manual-barcode-input');
+            if (manualInput) {
+                manualInput.value = '';
+                setTimeout(() => manualInput.focus(), 300);
+            }
+
+            if (typeof Html5Qrcode !== 'undefined') {
+                if (!html5QrcodeScanner) {
+                    html5QrcodeScanner = new Html5Qrcode("qr-reader");
+                }
+                const config = { fps: 10, qrbox: { width: 200, height: 200 } };
+                html5QrcodeScanner.start(
+                    { facingMode: "environment" },
+                    config,
+                    onBarcodeScannedSuccess,
+                    onBarcodeScannedError
+                ).catch(err => {
+                    console.log("Kamera tidak dapat diakses:", err);
+                    const qrReader = document.getElementById('qr-reader');
+                    if (qrReader) {
+                        qrReader.innerHTML = `
+                            <div class="p-4 text-center text-slate-400">
+                                <i class="fa-solid fa-camera-slash text-2xl mb-1 text-slate-500"></i>
+                                <p class="text-[11px]">Kamera tidak aktif. Gunakan pemindai USB/manual NIS di bawah.</p>
+                            </div>
+                        `;
+                    }
+                });
+            }
+        }
+
+        function closeScanModal() {
+            const modal = document.getElementById('modal-scan');
+            if (modal) modal.classList.add('hidden');
+
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    console.log("Scanner stopped.");
+                }).catch(err => console.log(err));
+            }
+
+            const lastResult = document.getElementById('scan-last-result');
+            if (lastResult) lastResult.classList.add('hidden');
+        }
+
+        function playBeepSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.15);
+            } catch(e) {}
+        }
+
+        function processStudentBarcodeAttendance(nis) {
+            const searchNis = nis.trim();
+            if (!searchNis) return;
+
+            let foundStudent = null;
+            let foundClass = null;
+
+            for (const cls in masterStudents) {
+                const s = masterStudents[cls].find(item => item.id.toString() === searchNis);
+                if (s) {
+                    foundStudent = s;
+                    foundClass = cls;
+                    break;
+                }
+            }
+
+            if (foundStudent) {
+                if (foundClass !== currentClass) {
+                    currentClass = foundClass;
+                    const selectEl = document.getElementById('select-class');
+                    if (selectEl) selectEl.value = currentClass;
+                }
+
+                // Otomatis atur Mata Pelajaran ke "Kehadiran Pagi"
+                const subjectEl = document.getElementById('input-subject');
+                if (subjectEl) subjectEl.value = 'Kehadiran Pagi';
+
+                // Pengecekan Waktu Scan (Batas 07:30 Pagi)
+                const now = new Date();
+                const hours = now.getHours();
+                const minutes = now.getMinutes();
+                const timeFormatted = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+                
+                // Jika > 07:30 -> Terlambat (T), Jika <= 07:30 -> Hadir (H)
+                const isLate = (hours > 7) || (hours === 7 && minutes > 30);
+                const status = isLate ? 'T' : 'H';
+                const statusText = isLate ? 'TERLAMBAT (T)' : 'HADIR (H)';
+
+                const key = getRecordKey();
+                if (!attendanceRecords[key]) attendanceRecords[key] = {};
+                attendanceRecords[key][foundStudent.id] = { status: status, time: timeFormatted };
+                localStorage.setItem('dh_records', JSON.stringify(attendanceRecords));
+
+                playBeepSound();
+
+                // Kirim otomatis ke Google Sheets jika URL Web App sudah diset
+                sendSingleAttendanceToSheet(foundStudent.name, foundStudent.id, currentDate, 'Kehadiran Pagi', status, foundClass);
+
+                const lastResult = document.getElementById('scan-last-result');
+                const resultName = document.getElementById('scan-result-name');
+                const resultInfo = document.getElementById('scan-result-info');
+
+                if (lastResult && resultName && resultInfo) {
+                    resultName.innerText = foundStudent.name;
+                    resultInfo.innerText = `NIS: ${foundStudent.id} | ${foundClass} | ${statusText} (${timeFormatted})`;
+                    
+                    if (isLate) {
+                        lastResult.className = "p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center space-x-3";
+                    } else {
+                        lastResult.className = "p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center space-x-3";
+                    }
+                    lastResult.classList.remove('hidden');
+                }
+
+                showToast(`✓ ${foundStudent.name} (${foundClass}) - ${statusText} [${timeFormatted}]`, isLate ? 'error' : 'success');
+                renderAttendanceTable();
+            } else {
+                showToast(`Siswa dengan NIS "${searchNis}" tidak ditemukan!`, 'error');
+            }
+        }
+
+        async function sendSingleAttendanceToSheet(studentName, nis, date, subject, status, studentClass) {
+            const webAppUrl = localStorage.getItem('dh_sheet_webapp_url');
+            if (!webAppUrl) return;
+
+            const statusLabelMap = {
+                'H': 'Hadir',
+                'S': 'Sakit',
+                'I': 'Izin',
+                'A': 'Alpa',
+                'T': 'Terlambat',
+                'B': 'Bolos'
+            };
+
+            const payload = [{
+                nama: studentName,
+                tanggal: date,
+                mata_pelajaran: subject,
+                status_kehadiran: statusLabelMap[status] || status,
+                kelas: studentClass
+            }];
+
+            try {
+                await fetch(webAppUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } catch (err) {
+                console.error('Gagal mengirim ke Google Sheets:', err);
+            }
+        }
+
+        function onBarcodeScannedSuccess(decodedText) {
+            processStudentBarcodeAttendance(decodedText);
+        }
+
+        function onBarcodeScannedError(errorMessage) {
+            // Ignore standard scanner frame misses
+        }
+
+        function handleManualBarcodeSubmit(e) {
+            e.preventDefault();
+            const input = document.getElementById('manual-barcode-input');
+            if (input && input.value) {
+                processStudentBarcodeAttendance(input.value);
+                input.value = '';
+                input.focus();
+            }
+        }
+
+        // Student Photo Upload Handlers
+        function triggerPhotoUpload(nis) {
+            currentUploadingNis = nis;
+            const input = document.getElementById('global-photo-input');
+            if (input) {
+                input.value = '';
+                input.click();
+            }
+        }
+
+        function onGlobalPhotoSelected(event) {
+            const file = event.target.files[0];
+            if (!file || !currentUploadingNis) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const maxDim = 300;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > maxDim) {
+                            height *= maxDim / width;
+                            width = maxDim;
+                        }
+                    } else {
+                        if (height > maxDim) {
+                            width *= maxDim / height;
+                            height = maxDim;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+
+                    for (const cls in masterStudents) {
+                        const s = masterStudents[cls].find(item => item.id === currentUploadingNis);
+                        if (s) {
+                            s.photo = compressedBase64;
+                            break;
+                        }
+                    }
+
+                    localStorage.setItem('dh_students', JSON.stringify(masterStudents));
+                    renderAttendanceTable();
+                    renderManageTable();
+                    showToast('Foto siswa berhasil diunggah', 'success');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function renderStudentSquarePhoto(student, sizeClass = "w-12 h-12") {
+            let photoSrc = student.photo || '';
+            const avatarFallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=0284c7&color=fff&bold=true&square=true`;
+            
+            if (photoSrc && photoSrc.includes('drive.google.com/file/d/')) {
+                const match = photoSrc.match(/\/d\/([^\/]+)/);
+                if (match && match[1]) {
+                    photoSrc = `https://lh3.googleusercontent.com/d/${match[1]}`;
+                }
+            }
+
+            if (!photoSrc) photoSrc = avatarFallback;
+
+            return `
+                <div onclick="triggerPhotoUpload('${student.id}')" title="Klik untuk unggah/ganti foto" class="relative group cursor-pointer ${sizeClass} rounded-xl overflow-hidden border-2 border-slate-200 bg-slate-100 shadow-sm shrink-0 flex items-center justify-center transition-all hover:border-brand-500">
+                    <img src="${photoSrc}" alt="${student.name}" onerror="this.onerror=null; this.src='${avatarFallback}';" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center text-white text-[9px] font-bold">
+                        <i class="fa-solid fa-camera text-xs"></i>
+                        <span>Ubah</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-emerald-800' : (type === 'error' ? 'bg-rose-800' : 'bg-slate-800');
+            toast.className = `${bgClass} text-white px-3.5 py-2.5 rounded-xl text-xs font-semibold shadow-xl flex items-center space-x-2 transition-all duration-300 opacity-0 transform -translate-y-2 pointer-events-auto z-50`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-info text-sm"></i><span>${message}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-0', '-translate-y-2');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', '-translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function getRecordKey() {
+            const subjectEl = document.getElementById('input-subject');
+            const subject = subjectEl ? subjectEl.value : 'UMUM';
+            return `${currentClass}_${currentDate}_${subject}`;
+        }
+
+        function handleClassChange() {
+            const selectEl = document.getElementById('select-class');
+            if (selectEl) currentClass = selectEl.value;
+            const currentManageEl = document.getElementById('current-manage-class');
+            if (currentManageEl) currentManageEl.innerText = currentClass;
+            renderAttendanceTable();
+            renderManageTable();
+        }
+
+        function handleDateChange() {
+            const dateInput = document.getElementById('input-date');
+            if (dateInput) currentDate = dateInput.value;
+            renderAttendanceTable();
+        }
+
+        function handleSubjectChange() {
+            saveSessionInfo();
+            renderAttendanceTable();
+        }
+
+        function saveSessionInfo() {
+            const subjectEl = document.getElementById('input-subject');
+            const subject = subjectEl ? subjectEl.value : '';
+            localStorage.setItem('dh_session', JSON.stringify({ subject }));
+        }
+
+        function loadSessionInfo() {
+            const saved = JSON.parse(localStorage.getItem('dh_session'));
+            if (saved && saved.subject) {
+                const subjectEl = document.getElementById('input-subject');
+                if (subjectEl) subjectEl.value = saved.subject;
+            }
+        }
+
+        function getStudentAttendance(nis) {
+            const key = getRecordKey();
+            if (!attendanceRecords[key]) attendanceRecords[key] = {};
+            if (!attendanceRecords[key][nis]) {
+                attendanceRecords[key][nis] = { status: 'H' };
+            }
+            return attendanceRecords[key][nis];
+        }
+
+        function setStudentStatus(nis, status) {
+            const key = getRecordKey();
+            if (!attendanceRecords[key]) attendanceRecords[key] = {};
+            
+            attendanceRecords[key][nis].status = status;
+            localStorage.setItem('dh_records', JSON.stringify(attendanceRecords));
+            
+            updateStats();
+            renderAttendanceRow(nis);
+        }
+
+        function setAllPresent() {
+            const list = masterStudents[currentClass] || [];
+            const key = getRecordKey();
+            if (!attendanceRecords[key]) attendanceRecords[key] = {};
+
+            list.forEach(s => {
+                attendanceRecords[key][s.id] = { status: 'H' };
+            });
+
+            localStorage.setItem('dh_records', JSON.stringify(attendanceRecords));
+            renderAttendanceTable();
+            showToast('Semua siswa berhasil di-set Hadir (H)', 'success');
+        }
+
+        function resetAllStatus() {
+            const list = masterStudents[currentClass] || [];
+            const key = getRecordKey();
+            if (!attendanceRecords[key]) attendanceRecords[key] = {};
+
+            list.forEach(s => {
+                attendanceRecords[key][s.id] = { status: 'H' };
+            });
+
+            localStorage.setItem('dh_records', JSON.stringify(attendanceRecords));
+            renderAttendanceTable();
+            showToast('Presensi direset ke Hadir', 'info');
+        }
+
+        async function saveAndSubmitAttendance() {
+            localStorage.setItem('dh_records', JSON.stringify(attendanceRecords));
+            
+            const webAppUrl = localStorage.getItem('dh_sheet_webapp_url');
+            const list = masterStudents[currentClass] || [];
+            const key = getRecordKey();
+            const record = attendanceRecords[key] || {};
+            const subjectEl = document.getElementById('input-subject');
+            const subject = subjectEl ? subjectEl.value : '-';
+
+            const statusLabelMap = {
+                'H': 'Hadir',
+                'S': 'Sakit',
+                'I': 'Izin',
+                'A': 'Alpa',
+                'T': 'Terlambat',
+                'B': 'Bolos'
+            };
+
+            const payload = list.map(student => {
+                const st = record[student.id] ? record[student.id].status : 'H';
+                return {
+                    nama: student.name,
+                    tanggal: currentDate,
+                    mata_pelajaran: subject,
+                    status_kehadiran: statusLabelMap[st] || st,
+                    kelas: currentClass
+                };
+            });
+
+            if (webAppUrl) {
+                showToast('Mengirim data ke Google Sheets...', 'info');
+                try {
+                    await fetch(webAppUrl, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    showToast('Presensi berhasil dikirim & diperbaharui di Google Sheets!', 'success');
+                } catch (error) {
+                    console.error('Sheet send error:', error);
+                    showToast('Tersimpan lokal. Gagal terhubung ke Google Sheets API.', 'error');
+                }
+            } else {
+                showToast('Data tersimpan di HP. Konfigurasi Google Sheets untuk sync online.', 'success');
+            }
+        }
+
+        function sendWhatsApp() {
+            const list = masterStudents[currentClass] || [];
+            const key = getRecordKey();
+            const record = attendanceRecords[key] || {};
+            const subjectEl = document.getElementById('input-subject');
+            const subject = subjectEl ? subjectEl.value : '-';
+
+            let total = list.length;
+            let hadir = 0, sakit = 0, izin = 0, alpa = 0, terlambat = 0, bolos = 0;
+            const nonHadirList = [];
+
+            const statusLabelMap = {
+                'H': 'Hadir',
+                'S': 'Sakit',
+                'I': 'Izin',
+                'A': 'Alpa',
+                'T': 'Terlambat',
+                'B': 'Bolos'
+            };
+
+            list.forEach(student => {
+                const st = record[student.id] ? record[student.id].status : 'H';
+                if (st === 'H') hadir++;
+                else if (st === 'S') { sakit++; nonHadirList.push(`• ${student.name} (${statusLabelMap[st]})`); }
+                else if (st === 'I') { izin++; nonHadirList.push(`• ${student.name} (${statusLabelMap[st]})`); }
+                else if (st === 'A') { alpa++; nonHadirList.push(`• ${student.name} (${statusLabelMap[st]})`); }
+                else if (st === 'T') { terlambat++; nonHadirList.push(`• ${student.name} (${statusLabelMap[st]})`); }
+                else if (st === 'B') { bolos++; nonHadirList.push(`• ${student.name} (${statusLabelMap[st]})`); }
+            });
+
+            let text = `*LAPORAN PRESENSI SISWA*\n`;
+            text += `*SMKN 2 GERUNG*\n\n`;
+            text += `*Kelas:* ${currentClass}\n`;
+            text += `*Mata Pelajaran:* ${subject}\n`;
+            text += `*Tanggal:* ${currentDate}\n\n`;
+            text += `*RINGKASAN KEHADIRAN:*\n`;
+            text += `Total Siswa: ${total}\n`;
+            text += `Hadir (H): ${hadir}\n`;
+            text += `Sakit (S): ${sakit}\n`;
+            text += `Izin (I): ${izin}\n`;
+            text += `Alpa (A): ${alpa}\n`;
+            text += `Terlambat (T): ${terlambat}\n`;
+            text += `Bolos (B): ${bolos}\n\n`;
+
+            if (nonHadirList.length > 0) {
+                text += `*DAFTAR SISWA TIDAK HADIR / TERLAMBAT / BOLOS:*\n`;
+                text += nonHadirList.join('\n');
+            } else {
+                text += `*Keterangan:* Semua siswa hadir (100%).`;
+            }
+
+            const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+            window.open(waUrl, '_blank');
+        }
+
+        function renderAttendanceTable() {
+            const tbody = document.getElementById('attendance-tbody');
+            const mobileCardsContainer = document.getElementById('mobile-student-cards');
+            const list = masterStudents[currentClass] || [];
+            
+            if (tbody) tbody.innerHTML = '';
+            if (mobileCardsContainer) mobileCardsContainer.innerHTML = '';
+
+            if (list.length === 0) {
+                if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-400">Tidak ada data siswa ditemukan.</td></tr>`;
+                if (mobileCardsContainer) mobileCardsContainer.innerHTML = `<div class="p-6 text-center bg-white rounded-2xl border border-slate-200 text-slate-400 text-xs font-medium">Tidak ada data siswa ditemukan.</div>`;
+                updateStats();
+                return;
+            }
+
+            list.forEach((student, index) => {
+                const att = getStudentAttendance(student.id);
+
+                // --- 1. Mobile Cards View Rendering ---
+                if (mobileCardsContainer) {
+                    const card = document.createElement('div');
+                    card.id = `mob-card-${student.id}`;
+                    card.className = "bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-sm space-y-3";
+                    card.innerHTML = `
+                        <div class="flex items-center space-x-3">
+                            ${renderStudentSquarePhoto(student, "w-14 h-14")}
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-[10px] font-bold text-slate-400">#${index + 1}</span>
+                                    <span class="text-[10px] font-mono px-1.5 py-0.5 bg-slate-100 rounded-md text-slate-500">${student.id}</span>
+                                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md ${student.gender === 'L' ? 'bg-blue-50 text-blue-600' : 'bg-pink-50 text-pink-600'}">${student.gender}</span>
+                                </div>
+                                <h3 class="text-xs font-extrabold text-slate-800 mt-1 truncate">${student.name}</h3>
+                                <p class="text-[9px] text-brand-600 font-semibold cursor-pointer mt-0.5" onclick="triggerPhotoUpload('${student.id}')">
+                                    <i class="fa-solid fa-upload text-[8px] mr-0.5"></i> Unggah Foto
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Mobile Status Button Bar (Updated to 6 status options) -->
+                        <div class="grid grid-cols-6 gap-1">
+                            ${renderStatusButtonMobile(student.id, 'H', 'Hadir', 'emerald', att.status)}
+                            ${renderStatusButtonMobile(student.id, 'S', 'Sakit', 'amber', att.status)}
+                            ${renderStatusButtonMobile(student.id, 'I', 'Izin', 'sky', att.status)}
+                            ${renderStatusButtonMobile(student.id, 'A', 'Alpa', 'rose', att.status)}
+                            ${renderStatusButtonMobile(student.id, 'T', 'Terlambat', 'indigo', att.status)}
+                            ${renderStatusButtonMobile(student.id, 'B', 'Bolos', 'fuchsia', att.status)}
+                        </div>
+                    `;
+                    mobileCardsContainer.appendChild(card);
+                }
+
+                // --- 2. Desktop Table View Rendering ---
+                if (tbody) {
+                    const tr = document.createElement('tr');
+                    tr.id = `att-row-${student.id}`;
+                    tr.className = "hover:bg-slate-50/80 transition border-b border-slate-100";
+
+                    tr.innerHTML = `
+                        <td class="py-2.5 px-4 text-center font-bold text-slate-400">${index + 1}</td>
+                        <td class="py-2.5 px-4 text-slate-600 font-mono">${student.id}</td>
+                        <td class="py-2.5 px-4 font-bold text-slate-800">
+                            <div class="flex items-center space-x-3">
+                                ${renderStudentSquarePhoto(student, "w-10 h-10")}
+                                <span>${student.name}</span>
+                            </div>
+                        </td>
+                        <td class="py-2.5 px-4 text-center text-slate-500 font-bold">${student.gender}</td>
+                        <td class="py-2.5 px-4 text-center">
+                            <div class="flex items-center justify-center gap-1">
+                                ${renderStatusButtonDesktop(student.id, 'H', 'Hadir', 'emerald', att.status)}
+                                ${renderStatusButtonDesktop(student.id, 'S', 'Sakit', 'amber', att.status)}
+                                ${renderStatusButtonDesktop(student.id, 'I', 'Izin', 'sky', att.status)}
+                                ${renderStatusButtonDesktop(student.id, 'A', 'Alpa', 'rose', att.status)}
+                                ${renderStatusButtonDesktop(student.id, 'T', 'Terlambat', 'indigo', att.status)}
+                                ${renderStatusButtonDesktop(student.id, 'B', 'Bolos', 'fuchsia', att.status)}
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+            });
+
+            updateStats();
+        }
+
+        function renderStatusButtonMobile(nis, code, label, color, activeStatus) {
+            const isActive = activeStatus === code;
+            let activeClasses = "";
+            
+            if (isActive) {
+                if (color === 'emerald') activeClasses = "bg-emerald-600 border-emerald-600 text-white shadow-md font-extrabold scale-105 ring-2 ring-emerald-200";
+                else if (color === 'amber') activeClasses = "bg-amber-500 border-amber-500 text-white shadow-md font-extrabold scale-105 ring-2 ring-amber-200";
+                else if (color === 'sky') activeClasses = "bg-sky-500 border-sky-500 text-white shadow-md font-extrabold scale-105 ring-2 ring-sky-200";
+                else if (color === 'rose') activeClasses = "bg-rose-600 border-rose-600 text-white shadow-md font-extrabold scale-105 ring-2 ring-rose-200";
+                else if (color === 'indigo') activeClasses = "bg-indigo-600 border-indigo-600 text-white shadow-md font-extrabold scale-105 ring-2 ring-indigo-200";
+                else if (color === 'fuchsia') activeClasses = "bg-fuchsia-600 border-fuchsia-600 text-white shadow-md font-extrabold scale-105 ring-2 ring-fuchsia-200";
+            } else {
+                activeClasses = "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 shadow-sm";
+            }
+
+            return `
+                <button onclick="setStudentStatus('${nis}', '${code}')" title="${label}" class="py-2 px-1 text-xs font-bold rounded-xl border transition-all duration-150 text-center flex flex-col items-center justify-center ${activeClasses}">
+                    <span>${code}</span>
+                </button>
+            `;
+        }
+
+        function renderStatusButtonDesktop(nis, code, label, color, activeStatus) {
+            const isActive = activeStatus === code;
+            let activeClasses = "";
+            
+            if (isActive) {
+                if (color === 'emerald') activeClasses = "bg-emerald-600 border-emerald-600 text-white shadow-md font-extrabold scale-105 ring-2 ring-emerald-200";
+                else if (color === 'amber') activeClasses = "bg-amber-500 border-amber-500 text-white shadow-md font-extrabold scale-105 ring-2 ring-amber-200";
+                else if (color === 'sky') activeClasses = "bg-sky-500 border-sky-500 text-white shadow-md font-extrabold scale-105 ring-2 ring-sky-200";
+                else if (color === 'rose') activeClasses = "bg-rose-600 border-rose-600 text-white shadow-md font-extrabold scale-105 ring-2 ring-rose-200";
+                else if (color === 'indigo') activeClasses = "bg-indigo-600 border-indigo-600 text-white shadow-md font-extrabold scale-105 ring-2 ring-indigo-200";
+                else if (color === 'fuchsia') activeClasses = "bg-fuchsia-600 border-fuchsia-600 text-white shadow-md font-extrabold scale-105 ring-2 ring-fuchsia-200";
+            } else {
+                activeClasses = "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 shadow-sm";
+            }
+
+            return `
+                <button onclick="setStudentStatus('${nis}', '${code}')" title="${label}" class="px-2.5 py-1.5 text-xs font-bold rounded-xl border transition-all duration-150 ${activeClasses}">
+                    ${code}
+                </button>
+            `;
+        }
+
+        function renderAttendanceRow(nis) {
+            const list = masterStudents[currentClass] || [];
+            const student = list.find(s => s.id === nis);
+            if (!student) return;
+
+            const att = getStudentAttendance(nis);
+
+            // Update Desktop Row
+            const row = document.getElementById(`att-row-${nis}`);
+            if (row && row.children[4]) {
+                row.children[4].innerHTML = `
+                    <div class="flex items-center justify-center gap-1">
+                        ${renderStatusButtonDesktop(student.id, 'H', 'Hadir', 'emerald', att.status)}
+                        ${renderStatusButtonDesktop(student.id, 'S', 'Sakit', 'amber', att.status)}
+                        ${renderStatusButtonDesktop(student.id, 'I', 'Izin', 'sky', att.status)}
+                        ${renderStatusButtonDesktop(student.id, 'A', 'Alpa', 'rose', att.status)}
+                        ${renderStatusButtonDesktop(student.id, 'T', 'Terlambat', 'indigo', att.status)}
+                        ${renderStatusButtonDesktop(student.id, 'B', 'Bolos', 'fuchsia', att.status)}
+                    </div>
+                `;
+            }
+
+            // Update Mobile Card Row
+            const mobCard = document.getElementById(`mob-card-${nis}`);
+            if (mobCard) {
+                const statusGrid = mobCard.querySelector('.grid');
+                if (statusGrid) {
+                    statusGrid.innerHTML = `
+                        ${renderStatusButtonMobile(student.id, 'H', 'Hadir', 'emerald', att.status)}
+                        ${renderStatusButtonMobile(student.id, 'S', 'Sakit', 'amber', att.status)}
+                        ${renderStatusButtonMobile(student.id, 'I', 'Izin', 'sky', att.status)}
+                        ${renderStatusButtonMobile(student.id, 'A', 'Alpa', 'rose', att.status)}
+                        ${renderStatusButtonMobile(student.id, 'T', 'Terlambat', 'indigo', att.status)}
+                        ${renderStatusButtonMobile(student.id, 'B', 'Bolos', 'fuchsia', att.status)}
+                    `;
+                }
+            }
+        }
+
+        function updateStats() {
+            const list = masterStudents[currentClass] || [];
+            let total = list.length;
+            let hadir = 0, sakit = 0, izin = 0, alpa = 0, terlambat = 0, bolos = 0;
+
+            const key = getRecordKey();
+            const record = attendanceRecords[key] || {};
+
+            list.forEach(student => {
+                const status = record[student.id] ? record[student.id].status : 'H';
+                if (status === 'H') hadir++;
+                else if (status === 'S') sakit++;
+                else if (status === 'I') izin++;
+                else if (status === 'A') alpa++;
+                else if (status === 'T') terlambat++;
+                else if (status === 'B') bolos++;
+            });
+
+            const statTotal = document.getElementById('stat-total');
+            const statHadir = document.getElementById('stat-hadir');
+            const statSakit = document.getElementById('stat-sakit');
+            const statIzin = document.getElementById('stat-izin');
+            const statAlpa = document.getElementById('stat-alpa');
+            const statTerlambat = document.getElementById('stat-terlambat');
+            const statBolos = document.getElementById('stat-bolos');
+
+            if (statTotal) statTotal.innerText = total;
+            if (statHadir) statHadir.innerText = hadir;
+            if (statSakit) statSakit.innerText = sakit;
+            if (statIzin) statIzin.innerText = izin;
+            if (statAlpa) statAlpa.innerText = alpa;
+            if (statTerlambat) statTerlambat.innerText = terlambat;
+            if (statBolos) statBolos.innerText = bolos;
+        }
+
+        // Student Management Functions
+        function renderManageTable() {
+            const tbody = document.getElementById('manage-tbody');
+            if (!tbody) return;
+            const list = masterStudents[currentClass] || [];
+            tbody.innerHTML = '';
+
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-400">Belum ada siswa di kelas ini.</td></tr>`;
+                return;
+            }
+
+            list.forEach((s, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 border-b border-slate-100";
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 text-center text-slate-400 font-bold">${index + 1}</td>
+                    <td class="py-2.5 px-3 font-mono">${s.id}</td>
+                    <td class="py-2.5 px-3 font-bold text-slate-800">
+                        <div class="flex items-center space-x-2.5">
+                            ${renderStudentSquarePhoto(s, "w-8 h-8")}
+                            <span>${s.name}</span>
+                        </div>
+                    </td>
+                    <td class="py-2.5 px-3 text-center">${s.gender}</td>
+                    <td class="py-2.5 px-3 text-right">
+                        <button onclick="deleteStudent('${s.id}')" class="text-rose-600 hover:text-rose-800 p-1 rounded transition">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function deleteStudent(nis) {
+            if (!masterStudents[currentClass]) return;
+            masterStudents[currentClass] = masterStudents[currentClass].filter(s => s.id !== nis);
+            localStorage.setItem('dh_students', JSON.stringify(masterStudents));
+            renderManageTable();
+            renderAttendanceTable();
+            showToast('Siswa berhasil dihapus', 'info');
+        }
+
+        function openImportModal() {
+            const modal = document.getElementById('modal-import');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeImportModal() {
+            const modal = document.getElementById('modal-import');
+            if (modal) modal.classList.add('hidden');
+            const importText = document.getElementById('import-text');
+            if (importText) importText.value = '';
+        }
+
+        function processBatchImport() {
+            const importText = document.getElementById('import-text');
+            const rawText = importText ? importText.value.trim() : '';
+            if (!rawText) {
+                closeImportModal();
+                return;
+            }
+
+            const lines = rawText.split('\n');
+            if (!masterStudents[currentClass]) masterStudents[currentClass] = [];
+
+            let addedCount = 0;
+            lines.forEach((line) => {
+                if (!line.trim()) return;
+                const parts = line.split(',');
+                if (parts.length >= 2) {
+                    const nis = parts[0].trim();
+                    const name = parts[1].trim();
+                    const genderPart = parts[2] ? parts[2].trim().toUpperCase() : 'L';
+                    const gender = (genderPart === 'P') ? 'P' : 'L';
+
+                    if (nis && name) {
+                        const existingIdx = masterStudents[currentClass].findIndex(s => s.id === nis);
+                        if (existingIdx >= 0) {
+                            masterStudents[currentClass][existingIdx].name = name;
+                            masterStudents[currentClass][existingIdx].gender = gender;
+                        } else {
+                            masterStudents[currentClass].push({ id: nis, name, gender });
+                        }
+                        addedCount++;
+                    }
+                }
+            });
+
+            localStorage.setItem('dh_students', JSON.stringify(masterStudents));
+            renderManageTable();
+            renderAttendanceTable();
+            closeImportModal();
+            showToast(`Berhasil mengimpor ${addedCount} data siswa`, 'success');
+        }
+
+        // Tab Navigation for Mobile & Desktop
+        function toggleTab(tabName) {
+            const tabAtt = document.getElementById('tab-attendance');
+            const tabMan = document.getElementById('tab-manage');
+
+            if (tabAtt) tabAtt.classList.add('hidden');
+            if (tabMan) tabMan.classList.add('hidden');
+
+            const dtAtt = document.getElementById('btn-tab-attendance');
+            const dtMan = document.getElementById('btn-tab-manage');
+
+            if (dtAtt) dtAtt.className = "py-3 px-4 text-xs font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition flex items-center space-x-2";
+            if (dtMan) dtMan.className = "py-3 px-4 text-xs font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition flex items-center space-x-2";
+
+            const mobAtt = document.getElementById('nav-mob-attendance');
+            const mobMan = document.getElementById('nav-mob-manage');
+
+            if (mobAtt) mobAtt.className = "flex flex-col items-center text-slate-400 transition-all";
+            if (mobMan) mobMan.className = "flex flex-col items-center text-slate-400 transition-all";
+
+            if (tabName === 'attendance') {
+                if (tabAtt) tabAtt.classList.remove('hidden');
+                if (dtAtt) dtAtt.className = "py-3 px-4 text-xs font-bold border-b-2 border-brand-500 text-brand-600 transition flex items-center space-x-2";
+                if (mobAtt) mobAtt.className = "flex flex-col items-center text-brand-600 font-bold transition-all";
+            } else if (tabName === 'manage') {
+                if (tabMan) tabMan.classList.remove('hidden');
+                if (dtMan) dtMan.className = "py-3 px-4 text-xs font-bold border-b-2 border-brand-500 text-brand-600 transition flex items-center space-x-2";
+                if (mobMan) mobMan.className = "flex flex-col items-center text-brand-600 font-bold transition-all";
+                renderManageTable();
+            }
+        }
+    </script>
+</body>
+</html>
