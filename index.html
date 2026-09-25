@@ -331,7 +331,7 @@
                 </div>
                 <div>
                     <label class="block text-[11px] font-bold text-slate-700 mb-1">Link Spreadsheet Rekap (Opsional)</label>
-                    <input type="text" id="input-sheet-rekap-url" placeholder="https://docs.google.com/spreadsheets/d/..." class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    <input type="text" id="input-sheet-rekap-url" placeholder="https://docs.google.com/spreadsheets/d/1PnesL--TUWzhxnAiiY-rubQjoCHIxuzKYLSmld8xvFg/edit?gid=0#gid=0" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                 </div>
 
                 <!-- Petunjuk Apps Script Code -->
@@ -428,6 +428,10 @@ function doPost(e) {
     </div>
 
     <script>
+        // Constants for default URLs (Auto-assigned for new users)
+        const DEFAULT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby5elL9a5P6X1KBHKOHs5hFItrM49V2uHANhQOInHlzicnls5-M1E_gFoULUK4dWgGWhA/exec";
+        const DEFAULT_REKAP_URL = "https://docs.google.com/spreadsheets/d/1PnesL--TUWzhxnAiiY-rubQjoCHIxuzKYLSmld8xvFg/edit?gid=0#gid=0";
+
         // Default Students Data
         const defaultStudents = {
             "X TK 1": [
@@ -613,15 +617,15 @@ function doPost(e) {
         }
 
         function saveSheetConfig() {
-            const webAppUrl = document.getElementById('input-sheet-url')?.value.trim() || '';
-            const rekapUrl = document.getElementById('input-sheet-rekap-url')?.value.trim() || '';
+            const webAppUrl = document.getElementById('input-sheet-url')?.value.trim() || DEFAULT_WEB_APP_URL;
+            const rekapUrl = document.getElementById('input-sheet-rekap-url')?.value.trim() || DEFAULT_REKAP_URL;
             
             localStorage.setItem('dh_sheet_webapp_url', webAppUrl);
             localStorage.setItem('dh_sheet_rekap_url', rekapUrl);
             
             const rekapBtn = document.getElementById('btn-rekap-link');
             if (rekapBtn) {
-                rekapBtn.href = rekapUrl || 'https://docs.google.com/spreadsheets';
+                rekapBtn.href = rekapUrl;
             }
 
             closeSheetModal();
@@ -629,8 +633,8 @@ function doPost(e) {
         }
 
         function loadSheetConfig() {
-            const webAppUrl = localStorage.getItem('dh_sheet_webapp_url') || '';
-            const rekapUrl = localStorage.getItem('dh_sheet_rekap_url') || '';
+            const webAppUrl = localStorage.getItem('dh_sheet_webapp_url') || DEFAULT_WEB_APP_URL;
+            const rekapUrl = localStorage.getItem('dh_sheet_rekap_url') || DEFAULT_REKAP_URL;
             
             const webAppInput = document.getElementById('input-sheet-url');
             if (webAppInput) webAppInput.value = webAppUrl;
@@ -754,7 +758,7 @@ function doPost(e) {
 
                 playBeepSound();
 
-                // Kirim otomatis ke Google Sheets jika URL Web App sudah diset
+                // Kirim otomatis ke Google Sheets
                 sendSingleAttendanceToSheet(foundStudent.name, foundStudent.id, currentDate, 'Kehadiran Pagi', status, foundClass);
 
                 const lastResult = document.getElementById('scan-last-result');
@@ -781,7 +785,7 @@ function doPost(e) {
         }
 
         async function sendSingleAttendanceToSheet(studentName, nis, date, subject, status, studentClass) {
-            const webAppUrl = localStorage.getItem('dh_sheet_webapp_url');
+            const webAppUrl = localStorage.getItem('dh_sheet_webapp_url') || DEFAULT_WEB_APP_URL;
             if (!webAppUrl) return;
 
             const statusLabelMap = {
@@ -862,7 +866,7 @@ function doPost(e) {
                     } else {
                         if (height > maxDim) {
                             width *= maxDim / height;
-                            height = maxDim;
+                            width = maxDim;
                         }
                     }
 
@@ -1024,7 +1028,7 @@ function doPost(e) {
         async function saveAndSubmitAttendance() {
             localStorage.setItem('dh_records', JSON.stringify(attendanceRecords));
             
-            const webAppUrl = localStorage.getItem('dh_sheet_webapp_url');
+            const webAppUrl = localStorage.getItem('dh_sheet_webapp_url') || DEFAULT_WEB_APP_URL;
             const list = masterStudents[currentClass] || [];
             const key = getRecordKey();
             const record = attendanceRecords[key] || {};
