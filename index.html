@@ -432,6 +432,15 @@ function doPost(e) {
         const DEFAULT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby5elL9a5P6X1KBHKOHs5hFItrM49V2uHANhQOInHlzicnls5-M1E_gFoULUK4dWgGWhA/exec";
         const DEFAULT_REKAP_URL = "https://docs.google.com/spreadsheets/d/1PnesL--TUWzhxnAiiY-rubQjoCHIxuzKYLSmld8xvFg/edit?gid=0#gid=0";
 
+        // Helper untuk mendapatkan tanggal lokal (YYYY-MM-DD) sesuai zona waktu HP/Browser
+        function getTodayLocalDate() {
+            const d = new Date();
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
         // Default Students Data
         const defaultStudents = {
             "X TK 1": [
@@ -579,7 +588,7 @@ function doPost(e) {
 
         // Application State
         let currentClass = "X TK 1";
-        let currentDate = new Date().toISOString().split('T')[0];
+        let currentDate = getTodayLocalDate();
         let masterStudents = JSON.parse(localStorage.getItem('dh_students')) || JSON.parse(JSON.stringify(defaultStudents));
 
         // Auto-update master data
@@ -597,6 +606,7 @@ function doPost(e) {
 
         // App Initialization
         window.onload = function() {
+            currentDate = getTodayLocalDate();
             const dateInput = document.getElementById('input-date');
             if (dateInput) dateInput.value = currentDate;
             loadSessionInfo();
@@ -604,6 +614,27 @@ function doPost(e) {
             renderAttendanceTable();
             renderManageTable();
         };
+
+        // Otomatis perbarui tanggal jika aplikasi/tab diaktifkan kembali di hari berbeda
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                checkAndUpdateTodayDate();
+            }
+        });
+
+        window.addEventListener('focus', function() {
+            checkAndUpdateTodayDate();
+        });
+
+        function checkAndUpdateTodayDate() {
+            const todayStr = getTodayLocalDate();
+            const dateInput = document.getElementById('input-date');
+            if (dateInput && dateInput.value !== todayStr) {
+                currentDate = todayStr;
+                dateInput.value = currentDate;
+                renderAttendanceTable();
+            }
+        }
 
         // Google Sheets Integration Config Functions
         function openSheetModal() {
